@@ -7,7 +7,7 @@ locals {
   vpc_id        = "vpc-0eb9910fa39036c4e"
   # Security Group das ECS Tasks autorizado no ingress do RDS.
   # A infra base não exporta este output via remote state, por isso é fixo aqui.
-  private_sg_id = "sg-081652541854af058"
+  private_sg_id = "sg-0e76786baedd6ae4f"
 }
 
 # ============================================================
