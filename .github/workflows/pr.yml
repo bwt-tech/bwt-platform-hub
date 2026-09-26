@@ -17,5 +17,5 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       environment: dev
-      role_arn: arn:aws:iam::053828499055:role/devops
+      role_arn: "arn:aws:iam::435560927482:role/bwt-tech-github"
       aws_region: us-east-1
