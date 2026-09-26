@@ -41,6 +41,7 @@ module "dev" {
   role_ecs_name = local.role_ecs_name
   vpc_id        = local.vpc_id
   port          = local.port
+  env          = local.env
 
   # Parâmetros SSM do banco provisionados pela infra base
   db_host_ssm_arn     = "${local.ssm_base_arn}/bwt/${local.env}/database/host"
