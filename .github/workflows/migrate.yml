@@ -43,12 +43,12 @@ jobs:
 
           echo "=== [DIAG] Buscando subnets públicas ==="
           SUBNET_IDS=$(aws ec2 describe-subnets \
-            --filters "Name=tag:Name,Values=VPC-ECS-public-*" \
+            --filters "Name=tag:Name,Values=vpc-microsservices-ecs-${{ inputs.environment }}-public-*" \
             --query "Subnets[*].SubnetId" \
             --output text | tr '\t' ',')
 
           if [ -z "$SUBNET_IDS" ]; then
-            echo "::error::Nenhuma subnet pública encontrada com tag 'VPC-ECS-public-*'. Verifique as tags na AWS."
+            echo "::error::Nenhuma subnet pública encontrada com tag 'vpc-microsservices-ecs-${{ inputs.environment }}-public-*'. Verifique as tags na AWS."
             exit 1
           fi
           echo "[DIAG] Subnets encontradas: $SUBNET_IDS"
@@ -72,7 +72,7 @@ jobs:
             --output json || true
 
           # Cluster ECS
-          CLUSTER="ecs-integrated"
+          CLUSTER="bwt-ecs-cluster-${{ inputs.environment }}"
           echo "[DIAG] Cluster: $CLUSTER"
 
           echo "=== [DIAG] Verificando se o cluster existe ==="
