@@ -14,7 +14,7 @@ resource "aws_ssm_parameter" "scheduler_cron" {
   description = "Cron expression for the synchronization job"
   type        = "String"
   overwrite   = false
-  value       = "* 5-16 * * *"
+  value       = ""
   lifecycle {
     ignore_changes = [value]
   }
@@ -24,7 +24,40 @@ resource "aws_ssm_parameter" "scheduler_batch_size" {
   name        = "/bwt/scheduler/batch_size"
   description = "Maximum number of deals to process per synchronization run"
   type        = "String"
-  value       = "1"
+  value       = "0"
+  overwrite   = false
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "scheduler_enabled" {
+  name        = "/bwt/reverse_scheduler/enabled"
+  description = "Enable or disable the background synchronization scheduler"
+  type        = "String"
+  value       = "false"
+  overwrite   = false
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "scheduler_cron" {
+  name        = "/bwt/reverse_scheduler/cron"
+  description = "Cron expression for the synchronization job"
+  type        = "String"
+  overwrite   = false
+  value       = ""
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "scheduler_batch_size" {
+  name        = "/bwt/reverse_scheduler/batch_size"
+  description = "Maximum number of deals to process per synchronization run"
+  type        = "String"
+  value       = "0"
   overwrite   = false
   lifecycle {
     ignore_changes = [value]
