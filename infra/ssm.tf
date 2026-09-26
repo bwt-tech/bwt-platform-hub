@@ -31,7 +31,7 @@ resource "aws_ssm_parameter" "scheduler_batch_size" {
   }
 }
 
-resource "aws_ssm_parameter" "scheduler_enabled" {
+resource "aws_ssm_parameter" "reverse_scheduler_enabled" {
   name        = "/bwt/reverse_scheduler/enabled"
   description = "Enable or disable the background synchronization scheduler"
   type        = "String"
@@ -42,7 +42,7 @@ resource "aws_ssm_parameter" "scheduler_enabled" {
   }
 }
 
-resource "aws_ssm_parameter" "scheduler_cron" {
+resource "aws_ssm_parameter" "reverse_scheduler_cron" {
   name        = "/bwt/reverse_scheduler/cron"
   description = "Cron expression for the synchronization job"
   type        = "String"
@@ -53,7 +53,7 @@ resource "aws_ssm_parameter" "scheduler_cron" {
   }
 }
 
-resource "aws_ssm_parameter" "scheduler_batch_size" {
+resource "aws_ssm_parameter" "reverse_scheduler_batch_size" {
   name        = "/bwt/reverse_scheduler/batch_size"
   description = "Maximum number of deals to process per synchronization run"
   type        = "String"
