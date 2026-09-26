@@ -13,7 +13,7 @@ resource "aws_ecs_service" "api-hub-service" {
   # não ser o SG autorizado a conectar no banco.
   # --------------------------------------------------------
   network_configuration {
-    subnets          = ["subnet-0c2ce9180583354e4", "subnet-0f57e1567dd14d622"]
+    subnets          = ["subnet-0e3d422f644482872", "subnet-0fcae2af8a71568c7"]
     security_groups  = [var.private_sg_id]
     assign_public_ip = true # Necessário para pull de imagens sem NAT Gateway
   }
