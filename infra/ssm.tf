@@ -47,7 +47,7 @@ resource "aws_ssm_parameter" "reverse_scheduler_cron" {
   description = "Cron expression for the synchronization job"
   type        = "String"
   overwrite   = false
-  value       = ""
+  value       = "* * * * *"
   lifecycle {
     ignore_changes = [value]
   }
