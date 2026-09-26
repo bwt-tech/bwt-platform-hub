@@ -47,3 +47,8 @@ variable "private_sg_id" {
   type        = string
   description = "ID do Security Group privado das ECS Tasks (exportado pela infra base). Deve ser o SG autorizado na regra de ingress do RDS."
 }
+
+variable "env" {
+  type        = string
+  description = "Environemtn"
+}
