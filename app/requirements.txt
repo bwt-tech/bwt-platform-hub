@@ -18,6 +18,6 @@ pytest-cov
 sentry-sdk
 cachetools
 sqlalchemy>=2.1.1
-psycopg2-binary>=2.9.0
+psycopg2
 alembic>=1.20.0
 curlify3
