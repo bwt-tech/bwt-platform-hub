@@ -1,0 +1,34 @@
+templates:
+  Brasileiros em Mendoza:
+    phone: "+5512991344987"
+    template: "698b79c0ef5524949f9ae3cc"
+    write_enabled: false
+    agent:
+      id: "bc6b081e-46f1-43b2-b580-df9c53fd393e"
+      name: "Vanessa - Comercial"
+      email: "vanessa.brasileirosemmendoza@gmail.com"
+      key: "/bwt/octadesk/keys/mendoza"
+
+
+  Brasileiros em Salta:
+    phone: "+5512991814012"
+    template: "69b572b3792bf357137835e7"
+    write_enabled: false
+    agent:
+      id: "9adcadd9-f409-48ee-b9a9-94cca601b586"
+      name: "Everton - Comercial"
+      email: "everton.brasileirosemsalta@gmail.com"
+      key: "/bwt/octadesk/keys/salta"
+
+
+  Serra Gaúcha:
+    phone: "+5512991814012"
+    template: "69726671d1475d1c794c2a10"
+    write_enabled: false
+    agent:
+      id: "9adcadd9-f409-48ee-b9a9-94cca601b586"
+      name: "Everton - Comercial"
+      email: "everton.brasileirosemsalta@gmail.com"
+      key: "/bwt/octadesk/keys/serra_gaucha"
+
+

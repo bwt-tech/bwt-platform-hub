@@ -1,0 +1,307 @@
+name: Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      role_arn:
+        type: string
+        required: true
+      aws_region:
+        type: string
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_arn }}
+          role-session-name: GITHUB
+          aws-region: ${{ inputs.aws_region }}
+
+      # ----------------------------------------------------------------
+      # O banco é 100% privado (publicly_accessible = false) e o SG do
+      # RDS só aceita tráfego do security group privado das ECS tasks.
+      # Por isso a migration roda como um ECS run-task dentro da VPC,
+      # usando a mesma imagem que acabou de ser publicada no ECR e o
+      # mesmo SG privado já autorizado na regra de ingress do RDS.
+      # ----------------------------------------------------------------
+
+      - name: Fetch networking config from SSM / infra outputs
+        id: infra
+        run: |
+          ENV=${{ inputs.environment }}
+
+          echo "=== [DIAG] Buscando subnets públicas ==="
+          SUBNET_IDS=$(aws ec2 describe-subnets \
+            --filters "Name=tag:Name,Values=VPC-ECS-public-*" \
+            --query "Subnets[*].SubnetId" \
+            --output text | tr '\t' ',')
+
+          if [ -z "$SUBNET_IDS" ]; then
+            echo "::error::Nenhuma subnet pública encontrada com tag 'VPC-ECS-public-*'. Verifique as tags na AWS."
+            exit 1
+          fi
+          echo "[DIAG] Subnets encontradas: $SUBNET_IDS"
+
+          echo "=== [DIAG] Buscando Security Group privado das ECS tasks ==="
+          PRIVATE_SG=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=private-sg-ecs" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          if [ -z "$PRIVATE_SG" ] || [ "$PRIVATE_SG" = "None" ]; then
+            echo "::error::Security Group 'private-sg-ecs' não encontrado. Verifique se o nome está correto."
+            exit 1
+          fi
+          echo "[DIAG] Security Group: $PRIVATE_SG"
+
+          echo "=== [DIAG] Verificando regras de egress do SG (necessário para pull de imagem ECR) ==="
+          aws ec2 describe-security-groups \
+            --group-ids "$PRIVATE_SG" \
+            --query "SecurityGroups[0].IpPermissionsEgress" \
+            --output json || true
+
+          # Cluster ECS
+          CLUSTER="ecs-integrated"
+          echo "[DIAG] Cluster: $CLUSTER"
+
+          echo "=== [DIAG] Verificando se o cluster existe ==="
+          CLUSTER_STATUS=$(aws ecs describe-clusters \
+            --clusters "$CLUSTER" \
+            --query "clusters[0].status" \
+            --output text)
+          echo "[DIAG] Status do cluster '$CLUSTER': $CLUSTER_STATUS"
+          if [ "$CLUSTER_STATUS" != "ACTIVE" ]; then
+            echo "::error::Cluster '$CLUSTER' não está ACTIVE (status: $CLUSTER_STATUS)."
+            exit 1
+          fi
+
+          # Task definition family
+          TASK_DEF="api-bwt-hub"
+          echo "[DIAG] Task Definition: $TASK_DEF"
+
+          echo "=== [DIAG] Verificando revisão ativa da task definition ==="
+          TASK_DEF_ARN=$(aws ecs describe-task-definition \
+            --task-definition "$TASK_DEF" \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+          echo "[DIAG] Task Definition ARN: $TASK_DEF_ARN"
+
+          echo "=== [DIAG] Verificando imagem na task definition ==="
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_DEF" \
+            --query "taskDefinition.containerDefinitions[*].{name:name,image:image}" \
+            --output table || true
+
+          echo "subnet_ids=$SUBNET_IDS"  >> $GITHUB_OUTPUT
+          echo "private_sg=$PRIVATE_SG"  >> $GITHUB_OUTPUT
+          echo "cluster=$CLUSTER"        >> $GITHUB_OUTPUT
+          echo "task_def=$TASK_DEF"      >> $GITHUB_OUTPUT
+
+      - name: Run Alembic migration via ECS run-task
+        id: run_task
+        run: |
+          echo "=== [DIAG] Iniciando ECS run-task para migração ==="
+          echo "[DIAG] Cluster : ${{ steps.infra.outputs.cluster }}"
+          echo "[DIAG] Task Def: ${{ steps.infra.outputs.task_def }}"
+          echo "[DIAG] Subnets : ${{ steps.infra.outputs.subnet_ids }}"
+          echo "[DIAG] SG      : ${{ steps.infra.outputs.private_sg }}"
+
+          # ---------------------------------------------------------------
+          # Causa do exit 255: o Dockerfile copia apenas './app' para /bwt/app.
+          # O binário 'alembic' existe no container mas 'migrations/' não está
+          # presente — o alembic falha ao tentar carregar o script_location.
+          #
+          # Solução (sem alterar código Python/fonte): invocamos alembic
+          # programaticamente via 'python3 -c' com Config em memória.
+          # O JSON de override é gerado pelo runner para garantir escaping.
+          #
+          # PRÉ-REQUISITO (Dockerfile - configuração de build, não código):
+          #   COPY ./migrations /bwt/migrations
+          # ---------------------------------------------------------------
+
+          # Escreve o script Python em arquivo temporário para evitar
+          # problemas de quoting/escaping no JSON do ECS
+          cat > /tmp/migrate_script.py << 'SCRIPT_EOF'
+          import sys, os
+          sys.path.insert(0, "/bwt")
+          from alembic.config import Config
+          from alembic import command
+          db_url = os.environ.get("DATABASE_URL")
+          if not db_url:
+              h = os.environ["DB_HOST"]
+              p = os.environ.get("DB_PORT", "5432")
+              n = os.environ["DB_NAME"]
+              u = os.environ["DB_USER"]
+              w = os.environ["DB_PASSWORD"]
+              db_url = f"postgresql://{u}:{w}@{h}:{p}/{n}"
+          print(f"[MIGRATE] host={os.environ.get('DB_HOST','N/A')} db={os.environ.get('DB_NAME','N/A')}", flush=True)
+          cfg = Config()
+          cfg.set_main_option("script_location", "/bwt/migrations")
+          cfg.set_main_option("sqlalchemy.url", db_url)
+          print("[MIGRATE] Executando alembic upgrade head...", flush=True)
+          command.upgrade(cfg, "head")
+          print("[MIGRATE] Concluido com sucesso.", flush=True)
+          SCRIPT_EOF
+
+          # Gera o JSON de override com escaping seguro
+          OVERRIDES_JSON=$(python3 -c "
+          import json
+          script = open('/tmp/migrate_script.py').read()
+          o = {'containerOverrides': [{'name': 'task-def-dev', 'command': ['python3', '-c', script], 'environment': [{'name': 'PYTHONPATH', 'value': '/bwt'}]}]}
+          print(json.dumps(o))
+          ")
+
+          echo "=== [DIAG] Overrides JSON gerado ==="
+          echo "$OVERRIDES_JSON" | python3 -m json.tool
+
+          RUN_TASK_OUTPUT=$(aws ecs run-task \
+            --cluster "${{ steps.infra.outputs.cluster }}" \
+            --task-definition "${{ steps.infra.outputs.task_def }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={
+              subnets=[${{ steps.infra.outputs.subnet_ids }}],
+              securityGroups=[${{ steps.infra.outputs.private_sg }}],
+              assignPublicIp=ENABLED
+            }" \
+            --overrides "$OVERRIDES_JSON" \
+            --output json)
+
+          echo "=== [DIAG] Resposta completa do run-task ==="
+          echo "$RUN_TASK_OUTPUT" | python3 -m json.tool || echo "$RUN_TASK_OUTPUT"
+
+          # Verifica failures antes de extrair o ARN
+          FAILURES=$(echo "$RUN_TASK_OUTPUT" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          failures = data.get('failures', [])
+          if failures:
+              for f in failures:
+                  print(f'FAILURE: arn={f.get(\"arn\",\"n/a\")} reason={f.get(\"reason\",\"n/a\")} detail={f.get(\"detail\",\"\")}')
+          print(f'FAILURES_COUNT={len(failures)}')
+          " 2>/dev/null || echo "FAILURES_COUNT=0")
+
+          echo "$FAILURES"
+          FAILURE_COUNT=$(echo "$FAILURES" | grep "FAILURES_COUNT=" | cut -d= -f2)
+
+          if [ "${FAILURE_COUNT:-0}" != "0" ]; then
+            echo "::error::ECS run-task retornou $FAILURE_COUNT failure(s). Verifique os logs acima."
+            exit 1
+          fi
+
+          TASK_ARN=$(echo "$RUN_TASK_OUTPUT" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          tasks = data.get('tasks', [])
+          print(tasks[0]['taskArn'] if tasks else '')
+          " 2>/dev/null)
+
+          if [ -z "$TASK_ARN" ]; then
+            echo "::error::Não foi possível obter o ARN da task. Verifique os failures acima."
+            exit 1
+          fi
+
+          echo "[DIAG] Task ARN: $TASK_ARN"
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+
+      - name: Wait for migration task to complete
+        run: |
+          echo "=== [DIAG] Aguardando task finalizar: ${{ steps.run_task.outputs.task_arn }} ==="
+          aws ecs wait tasks-stopped \
+            --cluster "${{ steps.infra.outputs.cluster }}" \
+            --tasks "${{ steps.run_task.outputs.task_arn }}"
+          echo "[DIAG] Task finalizada."
+
+      - name: Check migration exit code and collect diagnostics
+        run: |
+          echo "=== [DIAG] Coletando detalhes da task finalizada ==="
+
+          TASK_DETAIL=$(aws ecs describe-tasks \
+            --cluster "${{ steps.infra.outputs.cluster }}" \
+            --tasks "${{ steps.run_task.outputs.task_arn }}" \
+            --output json)
+
+          echo "=== [DIAG] JSON completo da task ==="
+          echo "$TASK_DETAIL" | python3 -m json.tool || echo "$TASK_DETAIL"
+
+          # Extrai campos críticos de diagnóstico
+          python3 - <<'PYEOF'
+          import sys, json, subprocess
+
+          result = subprocess.run(
+              ["aws", "ecs", "describe-tasks",
+               "--cluster", "${{ steps.infra.outputs.cluster }}",
+               "--tasks", "${{ steps.run_task.outputs.task_arn }}",
+               "--output", "json"],
+              capture_output=True, text=True
+          )
+          data = json.loads(result.stdout)
+          tasks = data.get("tasks", [])
+          if not tasks:
+              print("::error::Nenhuma task retornada por describe-tasks")
+              sys.exit(1)
+
+          task = tasks[0]
+          print(f"\n=== [DIAG] Task Summary ===")
+          print(f"  lastStatus       : {task.get('lastStatus')}")
+          print(f"  desiredStatus    : {task.get('desiredStatus')}")
+          print(f"  stoppedReason    : {task.get('stoppedReason', 'N/A')}")
+          print(f"  stopCode         : {task.get('stopCode', 'N/A')}")
+
+          print(f"\n=== [DIAG] Containers ===")
+          exit_code = None
+          for c in task.get("containers", []):
+              ec = c.get("exitCode")
+              reason = c.get("reason", "N/A")
+              print(f"  container : {c.get('name')}")
+              print(f"  exitCode  : {ec}")
+              print(f"  reason    : {reason}")
+              print(f"  status    : {c.get('lastStatus')}")
+              if exit_code is None:
+                  exit_code = ec
+
+          if exit_code is None:
+              print("\n::error::exitCode não encontrado — o container pode não ter iniciado (pull failure ou task placement failure)")
+              sys.exit(1)
+
+          if exit_code != 0:
+              print(f"\n::error::Migration falhou com exit code {exit_code}. Consulte os logs do CloudWatch do grupo definido na task definition.")
+              sys.exit(1)
+
+          print(f"\n[DIAG] Migration concluída com sucesso (exit code 0)")
+          PYEOF
+
+      - name: Fetch CloudWatch logs (last 100 events)
+        if: always()
+        run: |
+          echo "=== [DIAG] Buscando logs do CloudWatch ==="
+
+          # Extrai o log stream prefix e grupo da task definition
+          LOG_GROUP=$(aws ecs describe-task-definition \
+            --task-definition "${{ steps.infra.outputs.task_def }}" \
+            --query "taskDefinition.containerDefinitions[0].logConfiguration.options.\"awslogs-group\"" \
+            --output text)
+
+          # Extrai apenas o ID curto da task do ARN
+          TASK_ID=$(echo "${{ steps.run_task.outputs.task_arn }}" | awk -F'/' '{print $NF}')
+          LOG_STREAM="ecs/task-def-dev/${TASK_ID}"
+
+          echo "[DIAG] Log group : $LOG_GROUP"
+          echo "[DIAG] Log stream: $LOG_STREAM"
+
+          aws logs get-log-events \
+            --log-group-name "$LOG_GROUP" \
+            --log-stream-name "$LOG_STREAM" \
+            --limit 100 \
+            --query "events[*].message" \
+            --output text 2>&1 || echo "[DIAG] Logs ainda não disponíveis ou stream não encontrado (isso é normal se a task falhou no pull da imagem)."

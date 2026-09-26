@@ -1,0 +1,21 @@
+name: Pipeline of Build and deploy
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pipeline:
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: dev
+      role_arn: arn:aws:iam::053828499055:role/devops
+      aws_region: us-east-1

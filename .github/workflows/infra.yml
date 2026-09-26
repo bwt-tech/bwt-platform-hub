@@ -1,0 +1,80 @@
+name: Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      role_arn:
+        type: string
+        required: true
+      aws_region:
+        type: string
+        required: true
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest 
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Terraform 
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_arn}}
+          role-session-name: GITHUB
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Check destroy
+        id: should-destroy
+        run: |
+          DESTROY=$(jq -r '.${{ inputs.environment }}' ./infra/destroy_config.json)
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
+
+      - name: terraform init
+        id: tf_init
+        run: |
+          cd infra/env/${{ inputs.environment }}
+          terraform init
+
+      - name: terraform check init status
+        run: |
+          echo "${{ steps.tf_init.outcome }}"
+
+      - name: terraform validate
+        run: |
+          cd infra/env/${{ inputs.environment }}
+          terraform validate
+
+      - name: terraform destroy
+        if: steps.should-destroy.outputs.destroy == 'true'
+        run: |
+          cd infra/env/${{ inputs.environment }}
+          terraform destroy -auto-approve
+
+      - name: terraform plan
+        if: steps.should-destroy.outputs.destroy == 'false'
+        id: tf_plan
+        run: |
+          cd infra/env/${{ inputs.environment }}
+          terraform plan
+
+      - name: terraform apply
+        if: steps.should-destroy.outputs.destroy == 'false'
+        id: tf_apply
+        run: |
+          cd infra/env/${{ inputs.environment }}
+          terraform apply -auto-approve -lock-timeout=300s
+
+      - name: terraform check apply status
+        run: |
+          echo "${{ steps.tf_apply.outcome }}"

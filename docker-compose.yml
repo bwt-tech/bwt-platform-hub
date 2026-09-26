@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ministack:
+    container_name: ministack-main
+    image: ministackorg/ministack
+    ports:
+      - 4566:4566
+    environment:
+      - DEBUG=${DEBUG:-0}
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+  db:
+    image: postgres:16-alpine
+    container_name: bwt_platform_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: bwt_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

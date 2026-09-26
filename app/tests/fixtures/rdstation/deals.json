@@ -1,0 +1,10 @@
+{
+  "deals": [
+    {
+      "id": "deal_123",
+      "name": "Acme Corp Deal",
+      "amount": 1500.0,
+      "status": "won"
+    }
+  ]
+}

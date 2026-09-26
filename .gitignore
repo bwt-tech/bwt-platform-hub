@@ -1,0 +1,35 @@
+.coverage
+.kiro
+.cursor
+.venv/
+venv/
+**/**/__pycache__/
+*.py[cod]
+.pytest_cache/
+*.pyc
+.specify/
+.agents/
+specs/
+AGENTS.MD
+
+# Environment variables
+.env
+.env.*
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+# Terraform
+.terraform/
+*.tfstate*
+*.tfvars
+.terraform.lock.hcl

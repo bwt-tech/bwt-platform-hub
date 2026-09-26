@@ -1,0 +1,39 @@
+name: Pipeline of Build and deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: dev
+      role_arn: "arn:aws:iam::435560927482:role/bwt-tech-github"
+      aws_region: us-east-1
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    needs: build
+    with:
+      environment: dev
+      role_arn: "arn:aws:iam::435560927482:role/bwt-tech-github"
+      aws_region: us-east-1
+  infra:
+    uses: ./.github/workflows/infra.yml
+    needs: deploy
+    with:
+      environment: dev
+      role_arn: "arn:aws:iam::435560927482:role/bwt-tech-github"
+      aws_region: us-east-1
+  migrate:
+    uses: ./.github/workflows/migrate.yml
+    needs: infra
+    with:
+      environment: dev
+      role_arn: "arn:aws:iam::435560927482:role/bwt-tech-github"
+      aws_region: us-east-1

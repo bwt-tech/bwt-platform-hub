@@ -1,0 +1,84 @@
+from loguru import logger
+
+from app.src.domain.entities.chat import Chat
+from app.src.domain.entities.contact import Contact
+from app.src.domain.entities.deal import Deal
+from app.src.domain.entities.template_configuration import TemplateConfiguration
+from app.src.domain.process_summary_tracker import ProcessSummaryTracker
+from app.src.domain.repositories.chat_repository import ChatRepositoryPort
+from app.src.domain.repositories.contact_repository import ContactRepositoryPort
+from app.src.domain.repositories.deal_repository import DealRepositoryPort
+from app.src.ports.octadesk_port import OctadeskPort
+from app.src.ports.rdstation_port import RDStationPort
+
+
+class NewContactWorkflow:
+    def __init__(
+        self,
+        octadesk: OctadeskPort,
+        rdstation: RDStationPort,
+        contact_repo: ContactRepositoryPort | None = None,
+        deal_repo: DealRepositoryPort | None = None,
+        chat_repo: ChatRepositoryPort | None = None,
+    ):
+        self._octadesk = octadesk
+        self._rdstation = rdstation
+        self._contact_repo = contact_repo
+        self._deal_repo = deal_repo
+        self._chat_repo = chat_repo
+
+    def execute(
+        self,
+        deal: Deal,
+        contact: Contact,
+        configuration: TemplateConfiguration,
+        contacted_stage_id: str,
+        contacted_nickname: str,
+        tracker: ProcessSummaryTracker,
+    ) -> None:
+        logger.info(
+            f"[NEW CONTACT] Create octadesk contact: '{contact.name}' '{contact.phone}' '{contact.email}' "
+        )
+        post_response = self._octadesk.post_contacts(
+            contact.email, contact.name, contact.phone
+        )
+        tracker.record_contact_created(contact)
+
+        if post_response and isinstance(post_response, dict):
+            contact.octadesk_id = post_response.get("id")
+
+        if self._contact_repo:
+            contact = self._contact_repo.save(contact)
+
+        chat_response = self._octadesk.start_chat(
+            contact.to_dict(), configuration.to_dict()
+        )
+        result = chat_response["response"]["result"]
+        chat_id = result["roomKey"]
+        logger.info(f"https://app.octadesk.com/chat/{chat_id}/all")
+        self._octadesk.notify_agent(
+            chat_id,
+            f"Novo contato criado pelo funil de vendas da RD. Origem: {deal.deal_source_name}. Campanha: {deal.deal_campaign_name}",
+            configuration.agent,
+        )
+        contact.chat_response = chat_response
+        tracker.record_chat_started(contact)
+
+        # Save Deal
+        deal.contact_id = contact.id
+        deal.deal_status = contacted_nickname
+        if self._deal_repo:
+            deal = self._deal_repo.save(deal)
+
+        # Save Chat
+        chat = Chat(
+            id="",
+            status="active",
+            octadesk_id=chat_id,
+            channel="whatsapp",
+            contact_id=contact.id,
+        )
+        if self._chat_repo:
+            self._chat_repo.save(chat)
+
+        self._rdstation.put_deal(deal.deal_id, contacted_stage_id)

@@ -1,0 +1,40 @@
+name: Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      role_arn:
+        type: string
+        required: true
+      aws_region:
+        type: string
+        required: true
+        
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_URL: "http://localhost.localstack.cloud:4566"
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
+
+      - name: Install dependencies and test
+        run: |
+          pwd
+          docker compose up -d
+          python -m pip install --upgrade pip
+          pip install -r app/requirements.txt -U 
+          pytest

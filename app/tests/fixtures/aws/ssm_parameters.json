@@ -1,0 +1,5 @@
+{
+  "/bwt/scheduler/enabled": "true",
+  "/bwt/scheduler/cron": "*/5 * * * *",
+  "/bwt/scheduler/batch_size": "50"
+}

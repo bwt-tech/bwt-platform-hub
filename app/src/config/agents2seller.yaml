@@ -1,0 +1,159 @@
+- agent:
+    id: "0e1220b5-a91d-4243-aa83-3a48285dc244"
+    name: "Nicolas - Comercial"
+  seller: "Nicolas"
+  supervisor: "Vanessa Primeiro"
+  pipeline: Brasileiros em Mendoza
+  scope: SBM
+
+- agent: 
+    id: "8765c00e-84e5-46a4-bd67-89ff8008a67d"
+    name: "Andrele - Comercial"
+  seller: "Andrele"
+  supervisor: "Vanessa Primeiro"
+  pipeline: Brasileiros em Mendoza
+  scope: SBM
+
+- agent:
+    id: "7c3b95fb-b899-4926-9dc6-a718614d997f"
+    name: "Fernanda - Comercial"
+  seller: "Fernanda"
+  supervisor: "Vanessa Primeiro"
+  pipeline: Brasileiros em Mendoza
+  scope: SBM
+
+- agent:
+    id: "d4730093-4970-4c14-ae98-63a630fff0ee"
+    name: "Andreia - Comercial"
+  seller: "Andreia"
+  supervisor: "Vanessa Primeiro"
+  pipeline: Brasileiros em Mendoza
+  scope: SBM
+
+- agent:
+    id: "8f437c84-8a86-4bdc-b3f0-53db0f4cf9ae"
+    name: "Everton - Comercial"
+  seller: "Everton"
+  supervisor: "Vanessa Primeiro"
+  pipelines_by_tag:
+    - tag_name: Salta
+      pipeline: Brasileiros em Salta
+      scope: SBS
+
+    # - tag_name: "1-RD MDZ"
+    #   pipeline: Brasileiros em Mendoza
+    #   scope: SBM
+
+    - tag_name: "2-RD SALTA"
+      pipeline: Brasileiros em Salta
+      scope: SBS
+
+    - tag_name: "3-RD SERRA"
+      pipeline: Serra Gaúcha
+      scope: SG
+
+    - tag_name: "1 - Serra Ga\u00facha"
+      pipeline: Serra Gaúcha
+      scope: SG
+
+# - agent:
+#     id: "b853d616-9513-42cb-8f83-66090df5701b"
+#     name: "Andres - Comercial"
+#   seller: "Andres"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+
+
+# - agent:
+#     "id": "1bc2cdb2-317e-4d8f-857f-416818279003"
+#     name: "Juliana - Comercial"
+#   seller: "Juliana"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+# - agent:
+#     id: "5d7d9f28-511b-4811-a117-39bacd3315f3"
+#     name: "Amanda - Comercial"
+#   seller: "Amanda"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+# - agent:
+#     id: "62c8fc86-a742-4dc5-9982-b6434a6d5a8c"
+#     name: "Bruna - Comercial"
+#   seller: "Bruna"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+# - agent:
+#     id: "9e2973c4-de76-4952-a60a-7c171423767c"
+#     name: "Vanessa - Comercial"
+#   seller: "Vanessa"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+# - agent:
+#     id: "0a9971c8-e3d3-444b-b479-90d67d7d5310"
+#     name: "Tallyta - Comercial"
+#   seller: "Tallyta"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+# - agent:
+#     id: "870c4751-c703-4996-8232-644bd23cbced"
+#     name: "Rogerio - Comercial"
+#   seller: "Rogerio"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+
+# # - agent:
+# #   seller: "Marcelo"
+# #   supervisor: "Vanessa Primeiro"
+# #   pipeline: Brasileiros em Mendoza
+# #   scope: SBM
+
+# - agent:
+#     id: "90542042-6827-43b1-ba3d-5a81354c391e"
+#     name: "Rafaela - Comercial"
+#   seller: "Rafaela"
+#   supervisor: "Vanessa Primeiro"
+#   pipeline: Brasileiros em Mendoza
+#   scope: SBM
+
+
+
+# - agent:
+#     id: "18261196-edb8-4736-8490-161b5164c302"
+#     name: "Maria - Comercial"
+#   seller: "Maria Castro"
+#   supervisor: "Vanessa Primeiro"
+#   pipelines_by_tag:
+#     - tag_name: Salta
+#       pipeline: Brasileiros em Salta
+#       scope: SBS
+#     - tag_name: 1 - Serra Ga\u00facha
+#       pipeline: Serra Gaúcha
+#       scope: SG
+
+# - agent:
+#     id: "81fc782d-4cfe-4f32-8953-01e57e05b7be"
+#     name: "Tatiana - Comercial"
+#   seller: "Tatiana"
+#   supervisor: "Vanessa Primeiro"  
+#   pipelines_by_tag:
+#     - tag_name: Salta
+#       pipeline: Brasileiros em Salta
+#       scope: SBS
+#     - tag_name: "1 - Serra Ga\u00facha"
+#       pipeline: Serra Gaúcha
+#       scope: SG
+  
