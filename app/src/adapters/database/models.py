@@ -2,7 +2,16 @@ import uuid
 from datetime import datetime
 
 from app.src.adapters.database.connection import Base
-from sqlalchemy import UUID, Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import (
+    UUID,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.src.core.datetime_utils import get_now
@@ -47,10 +56,14 @@ class ContactInfoModel(Base):
         ForeignKey("contact.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    email = Column(String(255), unique=True, nullable=True)
-    phone = Column(String(255), unique=True, nullable=True)
+    email = Column(String(255), nullable=True)
+    phone = Column(String(255), nullable=True)
 
     contact = relationship("ContactModel", back_populates="info")
+
+    __table_args__ = (
+        UniqueConstraint("email", "phone", name="uq_contact_info_email_phone"),
+    )
 
 
 class DealModel(Base):
